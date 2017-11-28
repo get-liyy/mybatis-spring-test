@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:task="http://www.springframework.org/schema/task"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/mvc
+       http://www.springframework.org/schema/mvc/spring-mvc.xsd
+       http://www.springframework.org/schema/context
+       http://www.springframework.org/schema/context/spring-context.xsd
+       http://www.springframework.org/schema/task
+       http://www.springframework.org/schema/task/spring-task-3.0.xsd">
+	
+	<!-- 如果发现是静态资源的请求，就将该请求转由Web应用服务器默认的Servlet处理，如果不是静态资源的请求，才由DispatcherServlet继续处理。 -->
+	<mvc:default-servlet-handler />
+
+	<!--RequestMappingHandlerAdapter -->
+	<mvc:annotation-driven>
+		<mvc:message-converters>
+			<ref bean="stringHttpMessageConverter" />
+			<ref bean="marshallingHttpMessageConverter" />
+			<ref bean="mappingJackson2HttpMessageConverter" />
+		</mvc:message-converters>
+	</mvc:annotation-driven>
+	
+	<context:component-scan base-package="com.liyy.mybatis.controller" />
+	
+	<!-- 乱码处理 -->
+	<bean id="stringHttpMessageConverter"
+		class="org.springframework.http.converter.StringHttpMessageConverter" />
+	
+	<!-- 消息转换器 -->
+	<bean id="marshallingHttpMessageConverter"
+		class="org.springframework.http.converter.xml.MarshallingHttpMessageConverter">
+		<property name="marshaller" ref="castorMarshaller" />
+		<property name="unmarshaller" ref="castorMarshaller" />
+	</bean>
+	
+	<!-- Json转换器 -->
+	<bean id="mappingJackson2HttpMessageConverter"
+		class="org.springframework.http.converter.json.MappingJackson2HttpMessageConverter">
+		<property name="supportedMediaTypes">
+			<list>
+				<value>application/json</value>
+				<value>application/xml</value>
+				<value>text/html</value>
+				<value>text/plain</value>
+				<value>text/xml</value>
+			</list>
+		</property>
+		<!-- 这种是将字段为null的清理掉不在结果Json中显示出来 -->
+		<!-- <property name="objectMapper">  
+            <bean class="com.fasterxml.jackson.databind.ObjectMapper">  
+                <property name="serializationInclusion">  
+                    <value type="com.fasterxml.jackson.annotation.JsonInclude.Include">NON_NULL</value>  
+                </property>  
+            </bean>  
+        </property>   -->
+	</bean>
+	
+	<!-- Object和XML 的转换 -->
+	<bean id="castorMarshaller" class="org.springframework.oxm.castor.CastorMarshaller" />
+	
+	<!-- ajax请求的支持 -->
+	<bean id="contentNegotiationManagerFactoryBean" class="org.springframework.web.accept.ContentNegotiationManagerFactoryBean">
+		<property name="defaultContentType" value="text/html" />
+		<!-- 设置为true以忽略对Accept Header的支持 -->
+		<property name="ignoreAcceptHeader" value="true" />
+		<!-- true，开启扩展名支持，false关闭支持 -->
+		<property name="favorPathExtension" value="true" />
+		<!-- 用于开启 /userinfo/123?format=json的支持 -->
+		<property name="favorParameter" value="false" />
+		<!-- 参数值至mimeType的映射,即 /rest?format=json json是key，application/json就是value -->
+		<property name="mediaTypes">
+			<map>
+				<entry key="atom" value="application/atom+xml" />
+				<entry key="html" value="text/html" />
+				<entry key="json" value="application/json" />
+			</map>
+		</property>
+	</bean>
+
+	<!-- 内容协商视图解析器 -->
+	<bean class="org.springframework.web.servlet.view.ContentNegotiatingViewResolver">
+		<!--  -->
+		<property name="contentNegotiationManager">
+			<bean class="org.springframework.web.accept.ContentNegotiationManagerFactoryBean">
+				<!-- 在没有扩展名和参数时即: "/user/1" 时的默认展现形式 -->
+				<property name="defaultContentType" value="text/html" />
+				<!-- 参数值至mimeType的映射,即 /rest?format=json json是key，application/json就是value -->
+				<property name="mediaTypes">
+					<map>
+						<entry key="json" value="application/json" />
+						<entry key="xml" value="application/xml" />
+						<entry key="html" value="text/html" />
+					</map>
+				</property>
+			</bean>
+		</property>
+		<!-- 在视图逻辑名前面加上prefix,后面加上suffix -->
+		<property name="viewResolvers">
+			<list>
+				<bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+					<property name="prefix" value="/WEB-INF/jsp/" />
+					<property name="suffix" value=".jsp" />
+				</bean>
+			</list>
+		</property>
+		
+		<property name="defaultViews">
+			<list>
+				<!-- json格式 -->
+				<bean class="org.springframework.web.servlet.view.json.MappingJackson2JsonView" />
+				<bean class="org.springframework.web.servlet.view.xml.MarshallingView">
+					<property name="marshaller" ref="castorMarshaller" />
+				</bean>
+			</list>
+		</property>
+	</bean>
+
+	<!-- 国际化 -->
+	<bean id="messageSource" class="org.springframework.context.support.ResourceBundleMessageSource">
+		<property name="defaultEncoding" value="UTF-8" />
+		<!-- 国际化信息所在的文件名 -->
+		<property name="basenames">
+			<list>
+				<value>messages/welcome</value>
+			</list>
+		</property>
+	</bean>
+
+	<mvc:interceptors>
+		<!-- 国际化操作拦截器 如果采用基于（请求/Session/Cookie）则必需配置 -->
+		<bean class="org.springframework.web.servlet.i18n.LocaleChangeInterceptor" />
+	</mvc:interceptors>
+
+	<!-- 基于session
+	<bean id="localeResolver" class="org.springframework.web.servlet.i18n.SessionLocaleResolver" /> -->
+	
+	<!-- 基于cookie 里面的属性可以不设置 使用默认值 -->
+	<bean id="localeResolver" class="org.springframework.web.servlet.i18n.CookieLocaleResolver">
+	    <!-- 设置cookieName名称，可以根据名称通过js来修改设置，也可以像上面演示的那样修改设置，默认的名称为 类名+LOCALE（即：org.springframework.web.servlet.i18n.CookieLocaleResolver.LOCALE-->
+	    <property name="cookieName" value="lang" />
+	    <!-- 设置最大有效时间，如果是-1，则不存储，浏览器关闭后即失效，默认为Integer.MAX_INT-->
+	    <property name="cookieMaxAge" value="100000" />
+	    <!-- 设置cookie可见的地址，默认是“/”即对网站所有地址都是可见的，如果设为其它地址，则只有该地址或其后的地址才可见-->
+	    <property name="cookiePath" value="/" />
+	</bean>
+	
+	<!-- 配置任务线性池 -->
+	<task:executor id="executor" pool-size="5" />  
+	<task:scheduler id="scheduler" pool-size="10" />  
+	<!-- 启用annotation方式 -->
+	<task:annotation-driven executor="executor" scheduler="scheduler" />
+
+	<!--文件上传 -->
+	<bean id="multipartResolver"
+		class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+		<property name="maxUploadSize" value="1000000" />
+	</bean>
+	
+</beans>
