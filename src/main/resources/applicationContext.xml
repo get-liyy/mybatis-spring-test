@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns="http://www.springframework.org/schema/beans"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/tx
+       http://www.springframework.org/schema/tx/spring-tx.xsd
+       http://www.springframework.org/schema/aop
+       http://www.springframework.org/schema/aop/spring-aop.xsd
+       http://www.springframework.org/schema/context
+       http://www.springframework.org/schema/context/spring-context.xsd">
+	
+	<!-- 扫描包 -->
+    <context:component-scan base-package="com.liyy.mybatis.service"/>
+	
+	<!-- 读取properties文件 -->
+    <context:property-placeholder location="classpath:config.properties"/>
+
+	<!-- 数据源 -->
+    <bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource" init-method="init" destroy-method="close">
+        <property name="driverClassName" value="${jdbc.driverClass}"/>
+        <property name="url" value="${jdbc.url}"/>
+        <property name="username" value="${jdbc.user}"/>
+        <property name="password" value="${jdbc.password}"/>
+
+        <property name="filters" value="stat"/>
+
+        <property name="maxActive" value="20"/>
+        <property name="initialSize" value="1"/>
+        <property name="maxWait" value="60000"/>
+        <property name="minIdle" value="1"/>
+
+        <property name="timeBetweenEvictionRunsMillis" value="60000"/>
+        <property name="minEvictableIdleTimeMillis" value="300000"/>
+
+        <property name="validationQuery" value="SELECT 'x'"/>
+        <property name="testWhileIdle" value="true"/>
+        <property name="testOnBorrow" value="false"/>
+        <property name="testOnReturn" value="false"/>
+    </bean>
+
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <!-- 该属性必须配置，多数据源时会有多个dataSource，同时也需要配置多个sqlSessionFactory来对应。 -->
+        <property name="dataSource" ref="dataSource"/>
+        <!-- 自动扫描该路径下的所有文件并解析 -->
+        <property name="mapperLocations">
+            <array>
+                <value>classpath:mapper/*.xml</value>
+            </array>
+        </property>
+        <!-- 该属性可以给包中的类注册别名，注册后可以直接使用类名，而不用使用全限定的类名（就是不用包含包名）。 该属性可以配置多个，可以用,;\t\n进行分割。但是不支持Ant风格的路径。 -->
+        <property name="typeAliasesPackage" value="com.liyy.mybatis.model"/>
+        <!-- 配置MyBatis的拦截器，拦截器的配置顺序会影响拦截器的执行顺序。 -->
+        <property name="plugins">
+            <array>
+                <bean class="com.github.pagehelper.PageInterceptor">
+                    <!-- 这里的几个配置主要演示如何使用，如果不理解，一定要去掉下面的配置 -->
+                    <property name="properties">
+                        <value>
+                       		<!-- 配置helperDialect属性来指定分页插件使用哪种方言。配置时，可以使用下面的缩写值：oracle,mysql,mariadb -->
+                            helperDialect=mysql
+                            <!-- 默认值为false。当该参数设置为 true 时，pageNum<=0 时会查询第一页， pageNum>pages（超过总数时），会查询最后一页 -->
+                            reasonable=true
+                            <!-- 支持通过 Mapper 接口参数来传递分页参数，默认值false -->
+                            supportMethodsArguments=true
+                            <!-- 3.5.0版本可用 - 为了支持startPage(Object params)方法 -->
+				            <!-- 增加了一个`params`参数来配置参数映射，用于从Map或ServletRequest中取值 -->
+				            <!-- 可以配置pageNum,pageSize,count,pageSizeZero,reasonable,orderBy,不配置映射的用默认值 -->
+				            <!-- 默认值为pageNum=pageNum;pageSize=pageSize;count=countSql;reasonable=reasonable;pageSizeZero=pageSizeZero -->
+				            <!-- 不理解该含义的前提下，不要随便复制该配置 -->
+                            params=count=countSql
+                            <!-- 默认值为 false。设置为 true 时，允许在运行时根据多数据源自动识别对应方言的分页 （不支持自动选择sqlserver2012，只能使用sqlserver） -->
+                            <!-- 如果你在 Spring 中配置了动态数据源，并且连接不同类型的数据库，这时你可以配置 autoRuntimeDialect 为 true，这样在使用不同数据源时，会使用匹配的分页进行查询。 这种情况下，你还需要特别注意 closeConn 参数，由于获取数据源类型会获取一个数据库连接，所以需要通过这个参数来控制获取连接后，是否关闭该连接。 默认为 true，有些数据库连接关闭后就没法进行后续的数据库操作。而有些数据库连接不关闭就会很快由于连接数用完而导致数据库无响应。所以在使用该功能时，特别需要注意你使用的数据源是否需要关闭数据库连接。 -->
+                            autoRuntimeDialect=true
+                        </value>
+                    </property>
+                </bean>
+            </array>
+        </property>
+    </bean>
+	
+	<!-- 查 找 类 路 径 下 的 映 射 器 并 自 动 将 它 们 创 建 成 MapperFactoryBean -->
+    <bean class="tk.mybatis.spring.mapper.MapperScannerConfigurer">
+    	<!-- basePackage 属性是让你为映射器接口文件设置基本的包路径。 你可以使用分号或逗号 作为分隔符设置多于一个的包路径。每个映射器将会在指定的包路径中递归地被搜索到。 -->
+        <property name="basePackage" value="com.liyy.mybatis.mapper"/>
+        <!-- 3.2.2版本新特性，markerInterface可以起到mappers配置的作用，详细情况需要看Marker接口类 -->
+        <property name="markerInterface" value="com.liyy.mybatis.util.MyMapper"/>
+        <!-- 通用Mapper通过属性注入进行配置，默认不配置时会注册Mapper<T>接口
+        <property name="properties">
+            <value>
+                mappers=tk.mybatis.mapper.common.Mapper
+            </value>
+        </property>
+        -->
+    </bean>
+
+	<!-- 会话 -->
+    <bean id="sqlSession" class="org.mybatis.spring.SqlSessionTemplate" scope="prototype">
+    	<!-- 
+    		constructor-arg：通过构造函数注入。
+    		property：通过setter对应的方法注入。
+    	 -->
+        <constructor-arg index="0" ref="sqlSessionFactory"/>
+    </bean>
+	
+	<!-- 开启切面 -->
+    <aop:aspectj-autoproxy/>
+	
+	<!-- 配置 -->
+    <aop:config>
+    	<!-- 
+    		方面（Aspect）：一个关注点的模块化，这个关注点实现可能另外横切多个对象。事务管理是J2EE应用中一个很好的横切关注点例子。方面用Spring的Advisor或拦截器实现。
+    		连接点（Joinpoint）：程序执行过程中明确的点，如方法的调用或特定的异常被抛出。
+    		通知（Advice）：在特定的连接点，AOP框架执行的动作。各种类型的通知包括“around”、“before”和“throws”通知。
+    		切入点（Pointcut）：指定一个通知将被引发的一系列连接点的集合。AOP框架必须允许开发者指定切入点，例如，使用正则表达式。
+    		
+    		expression:方法签名的通配
+    		execution(modifiers-pattern? ret-type-pattern declaring-type-pattern? name-pattern(param-pattern)throws-pattern?)
+			returning type pattern,name pattern, and parameters pattern是必须的.
+			ret-type-pattern:可以为*表示任何返回值,全路径的类名等.
+			name-pattern:指定方法名,*代表所以,set*,代表以set开头的所有方法.
+			parameters pattern:指定方法参数(声明的类型),(..)代表所有参数,(*)代表一个参数,(*,String)代表第一个参数为任何值,第二个为String类型.
+    	-->
+        <aop:pointcut id="appService" expression="execution(* com.liyy.mybatis.service..*Service*.*(..))"/>
+        <aop:advisor advice-ref="txAdvice" pointcut-ref="appService"/>
+    </aop:config>
+    
+	<!-- 声明式事务配置管理 -->
+    <tx:advice id="txAdvice" transaction-manager="transactionManager">
+        <tx:attributes>
+        	<!--
+        		name	必须有值				描述：与事务属性关联的方法名。通配符（*）可以用来指定一批关联到相同的事务属性的方法。 如：'get*'、'handle*'、'on*Event'等等。	 	
+				propagation	默认值：REQUIRED	描述：事务传播行为
+				isolation	默认值：DEFAULT	描述：事务隔离级别
+				timeout		默认值：-1			描述：事务超时的时间（以秒为单位）
+				read-only	默认值：false		描述：事务是否只读？（典型地，对于只执行查询的事务你会将该属性设为true，如果出现了更新、插入或是删除语句时只读事务就会失败）
+				rollback-for				描述：将被触发进行回滚的 Exception(s)；以逗号分开。 如：'com.foo.MyBusinessException,ServletException'
+				no-rollback-for				描述：不被触发进行回滚的 Exception(s)；以逗号分开。 如：'com.foo.MyBusinessException,ServletException'
+        	-->
+            <tx:method name="select*" read-only="true"/>
+            <tx:method name="find*" read-only="true"/>
+            <tx:method name="get*" read-only="true"/>
+            <tx:method name="*"/>
+        </tx:attributes>
+    </tx:advice>
+	
+	<!-- 事务管理器 -->
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+    
+    <!-- 引入shiro配置 -->
+	<import resource="classpath:shiro-servlet.xml" />
+</beans>
