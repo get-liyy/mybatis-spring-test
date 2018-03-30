@@ -154,4 +154,7 @@
     
     <!-- 引入shiro配置 -->
 	<import resource="classpath:shiro-servlet.xml" />
+	
+    <!-- 引入rabbitMq配置 -->
+	<import resource="classpath:rabbit-mq.xml" />
 </beans>

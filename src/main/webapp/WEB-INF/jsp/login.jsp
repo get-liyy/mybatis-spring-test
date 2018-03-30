@@ -18,5 +18,8 @@
 	<br/>
 		<input type="submit" value="登录"/>
 	</form>
+	<a href="https://rio-sigmatrix-wxp.aax0.cn/rio-sigmatrix-WXP/wxapi/oauthOpenid?account=gh_5c0aedd3013a&scope=snsapi_userinfo&redirectUrl=https%3a%2f%2fwww.baidu.com">
+		<h1>授权</h1>
+	</a>
 </body>
 </html>

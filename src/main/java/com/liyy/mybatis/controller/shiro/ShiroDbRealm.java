@@ -19,7 +19,6 @@ import com.liyy.mybatis.model.UserInfo;
 import com.liyy.mybatis.service.UserInfoService;
 
 /**
- * 
  * @ClassName: ShiroDbRealm 
  * @Description: 
  * @author: liyanyong
